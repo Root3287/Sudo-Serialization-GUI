@@ -1,5 +1,7 @@
 package site.root3287.sudo.serialization;
 
+import java.util.Random;
+
 import site.root3287.sudo.serialization.container.SerializationArray;
 import site.root3287.sudo.serialization.container.SerializationDatabase;
 import site.root3287.sudo.serialization.container.SerializationField;
@@ -21,9 +23,14 @@ public class Main {
 		SerializationObject obj = new SerializationObject();
 		obj.addField(SerializationField.createFloatField("phi", (float) 1.618033989749894848208));
 		
+		SerializationObject obj3 = new SerializationObject("final");
+		SerializationArray a1 = SerializationArray.createIntegerArray("test-array", new int[] {new Random().nextInt(), new Random().nextInt(), new Random().nextInt(), new Random().nextInt()});
+		obj3.addArray(a1);
+		
 		database.addObject(player);
 		database.addObject(terrain1);
 		database.addObject(obj);
+		database.addObject(obj3);
 		
 		database.serializeFile("res/testDatabase.dat");
 		

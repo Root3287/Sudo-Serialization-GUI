@@ -91,6 +91,6 @@ public class SerializationString extends SerializationBase{
 	
 	@Override
 	public String toString() {
-		return this.getName() + " = " + getString();
+		return this.getName();
 	}
 }

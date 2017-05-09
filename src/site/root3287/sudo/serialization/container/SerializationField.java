@@ -159,38 +159,6 @@ public class SerializationField extends SerializationBase{
 	
 	@Override
 	public String toString() {
-		String name = new String(this.name);
-		String value = "";
-		switch(this.type){
-			case 0:
-				value = null;
-				break;
-			case 1:
-				value = new String(Short.toString(getShort()));
-				break;
-			case 2:
-				value = new String(Short.toString(getShort()));
-				break;
-			case 3:
-				value = new String(Character.toString(getChar()));
-				break;
-			case 4:
-				value = new String(Integer.toString(getInt()));
-				break;
-			case 5:
-				value =new String(Long.toString(getLong()));
-				break;
-			case 6:
-				value = new String(Float.toString(getFloat()));
-				break;
-			case 7:
-				value = new String(Double.toString(getDouble()));
-				break;
-			case 8:
-				value = new String(Boolean.toString(getBoolean()));
-				break;
-		}
-		
-		return name+" = "+value;
+		return getName();
 	}
 }
