@@ -229,6 +229,10 @@ public class SerializationArray extends SerializationBase{
 	public short[] getShortData() {
 		return shortData;
 	}
+	
+	public char[] getCharData() {
+		return charData;
+	}
 
 	public int[] getIntData() {
 		return intData;
@@ -244,5 +248,9 @@ public class SerializationArray extends SerializationBase{
 
 	public double[] getDoubleData() {
 		return doubleData;
+	}
+
+	public boolean[] getBooleanData() {
+		return booleanData;
 	}
 }

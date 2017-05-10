@@ -3,6 +3,8 @@ import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.IOException;
 
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -43,6 +45,9 @@ public class SerializationGUI {
 	private JTextField oldValue;
 	private JTextField txtNewvalue;
 	private JSplitPane valuesPane;
+	private JTabbedPane varibleTabbedPane;
+	private JTree arrayValueTree;
+	private File currentFile = null;
 	
 	/**
 	 * Launch the application.
@@ -95,6 +100,8 @@ public class SerializationGUI {
 				choose.showOpenDialog(SerializationGUI.this.frame);
 				if(choose.getSelectedFile() == null)
 					return;
+				
+				currentFile = choose.getSelectedFile();
 				tree.setRootVisible(true);
 				SerializationPharser p = new SerializationPharser(choose.getSelectedFile());
 				db = p.database;
@@ -125,6 +132,25 @@ public class SerializationGUI {
 		mnFile.add(mnNew);
 		
 		JMenuItem mntmSerializationFile = new JMenuItem("Serialization File");
+		mntmSerializationFile.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(tree.isRootVisible() || currentFile != null){
+					int cSave = JOptionPane.showConfirmDialog(frame, "Do you want to save?");
+					if(cSave == 0){ // yes
+						saveToFile(currentFile, false);
+					}else if(cSave == 1){ // no
+						DefaultMutableTreeNode treeroot = (DefaultMutableTreeNode) tree.getModel().getRoot();
+						treeroot.removeAllChildren();
+					}else{ //cancel
+						
+					}
+				}
+				db = new SerializationDatabase("null");
+				tree.setRootVisible(true);
+			}
+		});
 		mnNew.add(mntmSerializationFile);
 		
 		JMenu mnSerializationItems = new JMenu("Serialization Items");
@@ -220,6 +246,15 @@ public class SerializationGUI {
 		
 		JMenuItem mntmPaste = new JMenuItem("Paste");
 		mnEdit.add(mntmPaste);
+		
+		JMenu mnHelp = new JMenu("Help");
+		menuBar.add(mnHelp);
+		
+		JMenuItem mntmHowTo = new JMenuItem("How to");
+		mnHelp.add(mntmHowTo);
+		
+		JMenuItem mntmAbout = new JMenuItem("About");
+		mnHelp.add(mntmAbout);
 		frame.getContentPane().setLayout(new BorderLayout(0, 0));
 		
 		JSplitPane splitPane = new JSplitPane();
@@ -281,7 +316,59 @@ public class SerializationGUI {
 			    		oldValue.setText(s.getString());
 			    		txtNewvalue.setText(s.getString());
 			    	}else if (current.getUserObject() instanceof SerializationArray) {
-					
+			    		SerializationArray obj = (SerializationArray) current.getUserObject();
+			    		// Switch to array
+			    		varibleTabbedPane.setSelectedIndex(1);
+			    		
+			    		//All the values
+			    		DefaultTreeModel avtNode = (DefaultTreeModel) arrayValueTree.getModel();
+			    		avtNode.setRoot(new DefaultMutableTreeNode(obj.getName()));
+			    		DefaultMutableTreeNode avtRoot = (DefaultMutableTreeNode) avtNode.getRoot();
+			    		
+			    		switch (obj.type) {
+						case SerializationFieldType.BYTE:
+							for(byte b : obj.getData()){
+								avtRoot.add(new DefaultMutableTreeNode(b));
+							}
+							break;
+						case SerializationFieldType.CHAR:
+							for(char b : obj.getCharData()){
+								avtRoot.add(new DefaultMutableTreeNode(b));
+							}
+							break;
+						case SerializationFieldType.SHORT:
+							for(short b : obj.getShortData()){
+								avtRoot.add(new DefaultMutableTreeNode(b));
+							}
+							break;
+						case SerializationFieldType.INTEGER:
+							for(int b : obj.getIntData()){
+								avtRoot.add(new DefaultMutableTreeNode(b));
+							}
+							break;
+						case SerializationFieldType.LONG:
+							for(long b : obj.getLongData()){
+								avtRoot.add(new DefaultMutableTreeNode(b));
+							}
+							break;
+						case SerializationFieldType.FLOAT:
+							for(float b : obj.getFloatData()){
+								avtRoot.add(new DefaultMutableTreeNode(b));
+							}
+							break;
+						case SerializationFieldType.DOUBLE:
+							for(double b : obj.getDoubleData()){
+								avtRoot.add(new DefaultMutableTreeNode(b));
+							}
+							break;
+						case SerializationFieldType.BOOLEAN:
+							for(boolean b : obj.getBooleanData()){
+								avtRoot.add(new DefaultMutableTreeNode(b));
+							}
+							break;
+						default:
+							break;
+						}
 					}
 			    } else {
 			      
@@ -298,14 +385,13 @@ public class SerializationGUI {
 		lblValues.setHorizontalAlignment(SwingConstants.CENTER);
 		panel.add(lblValues, BorderLayout.NORTH);
 		
-		JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
-		panel.add(tabbedPane, BorderLayout.CENTER);
+		varibleTabbedPane = new JTabbedPane(JTabbedPane.TOP);
+		panel.add(varibleTabbedPane, BorderLayout.CENTER);
 		
 		/**
 		 * This is for a varible or string.
 		 */
 		valuesPane = new JSplitPane();
-		tabbedPane.addTab("New tab", null, valuesPane, null);
 		valuesPane.setResizeWeight(0.5);
 		valuesPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
 		
@@ -342,11 +428,42 @@ public class SerializationGUI {
 		panel_1.add(txtOldvalue);
 		txtOldvalue.setColumns(10);
 		
-		tabbedPane.add("Varible", valuesPane);
+		varibleTabbedPane.add("Varible", valuesPane);
 		
-		/**
-		 * This is for an array
-		 */
+		JScrollPane scrollPane_3 = new JScrollPane();
+		varibleTabbedPane.addTab("Array", null, scrollPane_3, null);
 		
+		arrayValueTree = new JTree(new DefaultMutableTreeNode("null"));
+		arrayValueTree.setShowsRootHandles(true);
+		arrayValueTree.setRootVisible(true);
+		scrollPane_3.setViewportView(arrayValueTree);
+	}
+	
+	public void saveToFile(File file, boolean toCurrentFile){
+		if(file == null){
+			JFileChooser chooser = new JFileChooser();
+			chooser.showSaveDialog(frame);
+			file = chooser.getSelectedFile();
+			if(file.getPath().indexOf(".") == -1){
+				if(JOptionPane.showConfirmDialog(frame, "Do you want to save with out an extension?") == 1){
+					chooser.showSaveDialog(frame);
+					file = chooser.getSelectedFile();
+				}
+			}
+		}
+		if(toCurrentFile){
+			currentFile = file;
+		}
+		if(!file.exists()){
+			try {
+				file.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		if(file != null)
+			db.setName(file.getName());
+			db.serializeFile(file.getAbsolutePath());
 	}
 }
