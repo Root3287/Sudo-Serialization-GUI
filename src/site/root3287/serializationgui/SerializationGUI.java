@@ -13,11 +13,14 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
 import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
+import javax.swing.border.BevelBorder;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -39,6 +42,7 @@ public class SerializationGUI {
 	private JTextField txtOldvalue;
 	private JTextField oldValue;
 	private JTextField txtNewvalue;
+	private JSplitPane valuesPane;
 	
 	/**
 	 * Launch the application.
@@ -91,6 +95,7 @@ public class SerializationGUI {
 				choose.showOpenDialog(SerializationGUI.this.frame);
 				if(choose.getSelectedFile() == null)
 					return;
+				tree.setRootVisible(true);
 				SerializationPharser p = new SerializationPharser(choose.getSelectedFile());
 				db = p.database;
 				tree.setModel(new DefaultTreeModel(new DefaultMutableTreeNode(db.getName())));
@@ -107,7 +112,8 @@ public class SerializationGUI {
 						object.add(new DefaultMutableTreeNode(f));
 					}
 					for(SerializationArray a : o.arrays){
-						object.add(new DefaultMutableTreeNode(a));
+						DefaultMutableTreeNode arrays = new DefaultMutableTreeNode(a);
+						object.add(arrays);
 					}
 					root.add(object);	
 				}
@@ -125,6 +131,18 @@ public class SerializationGUI {
 		mnNew.add(mnSerializationItems);
 		
 		JMenuItem addObject = new JMenuItem("Add Object");
+		addObject.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String res = JOptionPane.showInputDialog(frame, "name", "Name", JOptionPane.INFORMATION_MESSAGE);
+				DefaultMutableTreeNode node = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
+				if(node != null)
+					node.add(new DefaultMutableTreeNode(new SerializationObject(res)));
+				else
+					((DefaultMutableTreeNode)tree.getModel().getRoot()).add(new DefaultMutableTreeNode(new SerializationObject(res)));
+			}
+		});
 		mnSerializationItems.add(addObject);
 		
 		JMenuItem mntmAddField = new JMenuItem("Add Field");
@@ -133,11 +151,11 @@ public class SerializationGUI {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				String r = (String) JOptionPane.showInputDialog(frame, "What kind of field?", "Confirmation", JOptionPane.QUESTION_MESSAGE, null, new Object[]{"byte", "short", "char", "int", "long", "double", "float", "boolean"}, "byte");
-				System.out.println(r);
+				String name = JOptionPane.showInputDialog(frame, "Name: ", "Field Name", JOptionPane.QUESTION_MESSAGE);
 				if(r == null)
 					return;
 				if(r.equalsIgnoreCase("byte")){
-				//	String r2 = JOptionPane.showInputDialog(frame, "Value: ", "Value", JOptionPane.QUESTION_MESSAGE);
+					
 				}else if(r.equalsIgnoreCase("short")){
 					
 				}else if(r.equalsIgnoreCase("char")){
@@ -186,6 +204,9 @@ public class SerializationGUI {
 		
 		JMenuItem mntmSaveKey = new JMenuItem("Save Key");
 		mnFile.add(mntmSaveKey);
+		
+		JSeparator separator = new JSeparator();
+		mnFile.add(separator);
 		mnFile.add(mntmExit);
 		
 		JMenu mnEdit = new JMenu("Edit");
@@ -202,12 +223,16 @@ public class SerializationGUI {
 		frame.getContentPane().setLayout(new BorderLayout(0, 0));
 		
 		JSplitPane splitPane = new JSplitPane();
+		splitPane.setResizeWeight(0.2);
 		frame.getContentPane().add(splitPane, BorderLayout.CENTER);
 		
 		scrollPane = new JScrollPane();
 		splitPane.setLeftComponent(scrollPane);
 		
 		tree = new JTree(new DefaultMutableTreeNode("null"));
+		tree.setRootVisible(false);
+		tree.setShowsRootHandles(true);
+		tree.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
 		tree.setEditable(true);
 		tree.addTreeSelectionListener(new TreeSelectionListener() {
 			
@@ -256,7 +281,7 @@ public class SerializationGUI {
 			    		oldValue.setText(s.getString());
 			    		txtNewvalue.setText(s.getString());
 			    	}else if (current.getUserObject() instanceof SerializationArray) {
-						
+					
 					}
 			    } else {
 			      
@@ -273,13 +298,19 @@ public class SerializationGUI {
 		lblValues.setHorizontalAlignment(SwingConstants.CENTER);
 		panel.add(lblValues, BorderLayout.NORTH);
 		
-		JSplitPane splitPane_1 = new JSplitPane();
-		splitPane_1.setResizeWeight(0.5);
-		splitPane_1.setOrientation(JSplitPane.VERTICAL_SPLIT);
-		panel.add(splitPane_1, BorderLayout.CENTER);
+		JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
+		panel.add(tabbedPane, BorderLayout.CENTER);
+		
+		/**
+		 * This is for a varible or string.
+		 */
+		valuesPane = new JSplitPane();
+		tabbedPane.addTab("New tab", null, valuesPane, null);
+		valuesPane.setResizeWeight(0.5);
+		valuesPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
 		
 		JScrollPane scrollPane_1 = new JScrollPane();
-		splitPane_1.setLeftComponent(scrollPane_1);
+		valuesPane.setLeftComponent(scrollPane_1);
 		
 		JLabel lblOldValues_1 = new JLabel("Old Value");
 		scrollPane_1.setColumnHeaderView(lblOldValues_1);
@@ -291,7 +322,7 @@ public class SerializationGUI {
 		oldValue.setColumns(10);
 		
 		JScrollPane scrollPane_2 = new JScrollPane();
-		splitPane_1.setRightComponent(scrollPane_2);
+		valuesPane.setRightComponent(scrollPane_2);
 		
 		JLabel lblnValue = new JLabel("New Value");
 		scrollPane_2.setColumnHeaderView(lblnValue);
@@ -310,5 +341,12 @@ public class SerializationGUI {
 		txtOldvalue.setText("oldValue");
 		panel_1.add(txtOldvalue);
 		txtOldvalue.setColumns(10);
+		
+		tabbedPane.add("Varible", valuesPane);
+		
+		/**
+		 * This is for an array
+		 */
+		
 	}
 }
