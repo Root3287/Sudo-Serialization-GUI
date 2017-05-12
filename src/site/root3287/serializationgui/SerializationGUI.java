@@ -102,6 +102,7 @@ public class SerializationGUI {
 					return;
 				
 				currentFile = choose.getSelectedFile();
+				
 				tree.setRootVisible(true);
 				SerializationPharser p = new SerializationPharser(choose.getSelectedFile());
 				db = p.database;
@@ -163,10 +164,13 @@ public class SerializationGUI {
 			public void actionPerformed(ActionEvent e) {
 				String res = JOptionPane.showInputDialog(frame, "name", "Name", JOptionPane.INFORMATION_MESSAGE);
 				DefaultMutableTreeNode node = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
-				if(node != null)
-					node.add(new DefaultMutableTreeNode(new SerializationObject(res)));
-				else
-					((DefaultMutableTreeNode)tree.getModel().getRoot()).add(new DefaultMutableTreeNode(new SerializationObject(res)));
+				SerializationObject o = new SerializationObject(res);
+				db.addObject(o);
+				if(node != null){
+					node.add(new DefaultMutableTreeNode(o));
+				}else{
+					((DefaultMutableTreeNode)tree.getModel().getRoot()).add(new DefaultMutableTreeNode(o));
+				}
 			}
 		});
 		mnSerializationItems.add(addObject);
@@ -176,26 +180,58 @@ public class SerializationGUI {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				if(tree.getSelectionPath() == null){
+					JOptionPane.showMessageDialog(frame, "No object was selected!", "No object!", JOptionPane.WARNING_MESSAGE);
+					return;
+				}
+				DefaultMutableTreeNode selected = (DefaultMutableTreeNode) tree.getSelectionPath().getLastPathComponent();
+				
+				if(!(selected.getUserObject() instanceof SerializationObject)){
+					JOptionPane.showMessageDialog(frame, "No Serialization Object has been selected!");
+					return;
+				}
+				
 				String r = (String) JOptionPane.showInputDialog(frame, "What kind of field?", "Confirmation", JOptionPane.QUESTION_MESSAGE, null, new Object[]{"byte", "short", "char", "int", "long", "double", "float", "boolean"}, "byte");
 				String name = JOptionPane.showInputDialog(frame, "Name: ", "Field Name", JOptionPane.QUESTION_MESSAGE);
-				if(r == null)
+				String value = JOptionPane.showInputDialog(frame, "Value:", "Value", JOptionPane.QUESTION_MESSAGE);
+				
+				if(r == null){
+					System.out.println("no file selected!");
 					return;
+				}
+				
 				if(r.equalsIgnoreCase("byte")){
-					
+					SerializationField c = SerializationField.createByteField(name, Byte.parseByte(value));
+					((SerializationObject) selected.getUserObject()).addField(c);
+					selected.add(new DefaultMutableTreeNode(c));
 				}else if(r.equalsIgnoreCase("short")){
-					
+					SerializationField c = SerializationField.createShortField(name, Short.parseShort(value));
+					((SerializationObject) selected.getUserObject()).addField(c);
+					selected.add(new DefaultMutableTreeNode(c));
 				}else if(r.equalsIgnoreCase("char")){
-					
+					SerializationField c = SerializationField.createCharField(name, value.charAt(0));
+					((SerializationObject) selected.getUserObject()).addField(c);
+					selected.add(new DefaultMutableTreeNode(c));
 				}else if(r.equalsIgnoreCase("int")){
-					
+					SerializationField c = SerializationField.createIntegerField(name, Integer.parseInt(value));
+					((SerializationObject) selected.getUserObject()).addField(c);
+					selected.add(new DefaultMutableTreeNode(c));
 				}else if(r.equalsIgnoreCase("long")){
-					
+					SerializationField c = SerializationField.createLongField(name, new Long(value));
+					((SerializationObject) selected.getUserObject()).addField(c);
+					selected.add(new DefaultMutableTreeNode(c));
 				}else if(r.equalsIgnoreCase("double")){
-					
+					SerializationField c = SerializationField.createDoubleField(name, Double.parseDouble(value));
+					((SerializationObject) selected.getUserObject()).addField(c);
+					selected.add(new DefaultMutableTreeNode(c));
 				}else if(r.equalsIgnoreCase("float")){
-					
+					SerializationField c = SerializationField.createFloatField(name, Float.parseFloat(value));
+					((SerializationObject) selected.getUserObject()).addField(c);
+					selected.add(new DefaultMutableTreeNode(c));
 				}else if(r.equalsIgnoreCase("boolean")){
-					
+					SerializationField c = SerializationField.createBooleanField(name, Boolean.parseBoolean(value));
+					((SerializationObject) selected.getUserObject()).addField(c);
+					selected.add(new DefaultMutableTreeNode(c));
 				}
 			}
 		});
@@ -205,7 +241,18 @@ public class SerializationGUI {
 		mnSerializationItems.add(mntmAddArray);
 		mnFile.add(mntmOpen);
 		
+		JSeparator separator_2 = new JSeparator();
+		mnFile.add(separator_2);
+		
 		JMenuItem save = new JMenuItem("Save File (CTRL+S)");
+		save.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				
+				saveToFile(currentFile, true);
+			}
+		});
 		mnFile.add(save);
 		
 		JMenuItem saveAs = new JMenuItem("Save File As (CTRL+SHIFT+S)");
@@ -213,8 +260,7 @@ public class SerializationGUI {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				JFileChooser chooser = new JFileChooser();
-				chooser.showSaveDialog(SerializationGUI.this.frame);
+				saveToFile(null, true);
 			}
 		});
 		mnFile.add(saveAs);
@@ -231,12 +277,50 @@ public class SerializationGUI {
 		JMenuItem mntmSaveKey = new JMenuItem("Save Key");
 		mnFile.add(mntmSaveKey);
 		
+		JMenuItem mntmRefresh = new JMenuItem("Refresh");
+		mntmRefresh.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				frame.repaint();
+			}
+		});
+		
+		JSeparator separator_1 = new JSeparator();
+		mnFile.add(separator_1);
+		mnFile.add(mntmRefresh);
+		
 		JSeparator separator = new JSeparator();
 		mnFile.add(separator);
 		mnFile.add(mntmExit);
 		
 		JMenu mnEdit = new JMenu("Edit");
 		menuBar.add(mnEdit);
+		
+		JMenuItem mntmRename = new JMenuItem("Rename");
+		mntmRename.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				DefaultMutableTreeNode current = (DefaultMutableTreeNode)tree.getLastSelectedPathComponent();
+				if(current == null){
+					JOptionPane.showMessageDialog(frame, "There is no item to rename!");
+					return;
+				}
+				String newName = JOptionPane.showInputDialog(frame, "New Name", "Rename", JOptionPane.QUESTION_MESSAGE);
+				if(current.getUserObject() instanceof SerializationObject){
+					SerializationObject obj = (SerializationObject) current.getUserObject();
+					obj.setName(newName);
+				}else if(current.getUserObject() instanceof SerializationField){
+					SerializationField f = (SerializationField) current.getUserObject();
+					f.setName(newName);
+				}else if(current.getUserObject() instanceof SerializationArray){
+					SerializationArray a = (SerializationArray) current.getUserObject();
+					a.setName(newName);
+				}
+			}
+		});
+		mnEdit.add(mntmRename);
 		
 		JMenuItem mntmCut = new JMenuItem("Cut");
 		mnEdit.add(mntmCut);
@@ -254,6 +338,11 @@ public class SerializationGUI {
 		mnHelp.add(mntmHowTo);
 		
 		JMenuItem mntmAbout = new JMenuItem("About");
+		mntmAbout.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				new AboutGUI();
+			}
+		});
 		mnHelp.add(mntmAbout);
 		frame.getContentPane().setLayout(new BorderLayout(0, 0));
 		
@@ -268,7 +357,7 @@ public class SerializationGUI {
 		tree.setRootVisible(false);
 		tree.setShowsRootHandles(true);
 		tree.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
-		tree.setEditable(true);
+		tree.setEditable(false);
 		tree.addTreeSelectionListener(new TreeSelectionListener() {
 			
 			@Override
@@ -280,6 +369,7 @@ public class SerializationGUI {
 			    if (current.isLeaf()) { // EOL
 			    	if(current.getUserObject() instanceof SerializationField){
 			    		SerializationField f = (SerializationField) current.getUserObject();
+			    		arrayValueTree.setRootVisible(false);
 			    		Object result = null;
 			    		switch (f.type) {
 			    		case SerializationFieldType.BYTE:
@@ -315,7 +405,9 @@ public class SerializationGUI {
 			    		SerializationString s = (SerializationString) current.getUserObject();
 			    		oldValue.setText(s.getString());
 			    		txtNewvalue.setText(s.getString());
+			    		arrayValueTree.setRootVisible(false);
 			    	}else if (current.getUserObject() instanceof SerializationArray) {
+			    		arrayValueTree.setRootVisible(true);
 			    		SerializationArray obj = (SerializationArray) current.getUserObject();
 			    		// Switch to array
 			    		varibleTabbedPane.setSelectedIndex(1);
@@ -435,7 +527,8 @@ public class SerializationGUI {
 		
 		arrayValueTree = new JTree(new DefaultMutableTreeNode("null"));
 		arrayValueTree.setShowsRootHandles(true);
-		arrayValueTree.setRootVisible(true);
+		arrayValueTree.setRootVisible(false);
+		arrayValueTree.setEditable(true);
 		scrollPane_3.setViewportView(arrayValueTree);
 	}
 	
@@ -444,26 +537,31 @@ public class SerializationGUI {
 			JFileChooser chooser = new JFileChooser();
 			chooser.showSaveDialog(frame);
 			file = chooser.getSelectedFile();
+			//System.out.println(file.getName().substring(0, file.getName().indexOf(".")));
 			if(file.getPath().indexOf(".") == -1){
 				if(JOptionPane.showConfirmDialog(frame, "Do you want to save with out an extension?") == 1){
 					chooser.showSaveDialog(frame);
 					file = chooser.getSelectedFile();
 				}
 			}
+			if(!file.exists()){
+				try {
+					file.createNewFile();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 		if(toCurrentFile){
 			currentFile = file;
 		}
-		if(!file.exists()){
-			try {
-				file.createNewFile();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+		if(file != null){
+			if(db == null){
+				db = new SerializationDatabase(file.getName().substring(0, file.getName().indexOf(".")));
+			}else{
+				db.setName(file.getName().substring(0, file.getName().indexOf(".")));
 			}
-		}
-		if(file != null)
-			db.setName(file.getName());
 			db.serializeFile(file.getAbsolutePath());
+		}
 	}
 }
