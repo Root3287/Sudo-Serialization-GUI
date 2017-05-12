@@ -401,11 +401,13 @@ public class SerializationGUI {
 						}
 			    		oldValue.setText(result.toString());
 			    		txtNewvalue.setText(result.toString());
+			    		varibleTabbedPane.setSelectedIndex(0);
 			    	}else if(current.getUserObject() instanceof SerializationString){
 			    		SerializationString s = (SerializationString) current.getUserObject();
 			    		oldValue.setText(s.getString());
 			    		txtNewvalue.setText(s.getString());
 			    		arrayValueTree.setRootVisible(false);
+			    		varibleTabbedPane.setSelectedIndex(0);
 			    	}else if (current.getUserObject() instanceof SerializationArray) {
 			    		arrayValueTree.setRootVisible(true);
 			    		SerializationArray obj = (SerializationArray) current.getUserObject();
@@ -478,6 +480,7 @@ public class SerializationGUI {
 		panel.add(lblValues, BorderLayout.NORTH);
 		
 		varibleTabbedPane = new JTabbedPane(JTabbedPane.TOP);
+		varibleTabbedPane.setEnabled(false);
 		panel.add(varibleTabbedPane, BorderLayout.CENTER);
 		
 		/**
