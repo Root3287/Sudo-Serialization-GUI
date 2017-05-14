@@ -26,6 +26,7 @@ public class Main {
 		SerializationObject obj3 = new SerializationObject("final");
 		SerializationArray a1 = SerializationArray.createIntegerArray("test-array", new int[] {new Random().nextInt(), new Random().nextInt(), new Random().nextInt(), new Random().nextInt()});
 		obj3.addArray(a1);
+		//a1.setName("test-array--");
 		
 		database.addObject(player);
 		database.addObject(terrain1);

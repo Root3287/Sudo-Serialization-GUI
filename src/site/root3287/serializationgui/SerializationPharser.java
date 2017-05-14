@@ -8,4 +8,7 @@ public class SerializationPharser {
 	public SerializationPharser(File file){
 		database = SerializationDatabase.deserializeFile(file.getPath());
 	}
+	public SerializationPharser(){
+		database = new SerializationDatabase("null");
+	}
 }

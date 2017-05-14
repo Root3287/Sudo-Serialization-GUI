@@ -5,6 +5,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -27,6 +30,7 @@ import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.MutableTreeNode;
 
 import site.root3287.sudo.serialization.container.SerializationArray;
 import site.root3287.sudo.serialization.container.SerializationDatabase;
@@ -48,6 +52,11 @@ public class SerializationGUI {
 	private JTabbedPane varibleTabbedPane;
 	private JTree arrayValueTree;
 	private File currentFile = null;
+	
+	private List<SerializationObject> objects = new ArrayList<>();
+	private HashMap<SerializationObject, List<SerializationField>> fields = new HashMap<>();
+	private HashMap<SerializationObject, List<SerializationArray>> array = new HashMap<>();
+	private HashMap<SerializationObject, List<SerializationString>> string = new HashMap<>();
 	
 	/**
 	 * Launch the application.
@@ -111,20 +120,37 @@ public class SerializationGUI {
 				DefaultTreeModel treeModel = (DefaultTreeModel) tree.getModel();
 				DefaultMutableTreeNode root = (DefaultMutableTreeNode) treeModel.getRoot();
 				
+				objects.clear();
+				fields.clear();
+				array.clear();
+				string.clear();
+				
 				for(SerializationObject o : p.database.objects){
 					DefaultMutableTreeNode object = new DefaultMutableTreeNode(o);
+					List<SerializationField> fieldsArr = new ArrayList<>();
+					List<SerializationArray> arrayArr = new ArrayList<>();
+					List<SerializationString> stringsArr = new ArrayList<>();
+					
 					for(SerializationString s : o.strings){
 						object.add(new DefaultMutableTreeNode(s));
+						stringsArr.add(s);
 					}
 					for(SerializationField f : o.fields){
 						object.add(new DefaultMutableTreeNode(f));
+						fieldsArr.add(f);
 					}
 					for(SerializationArray a : o.arrays){
 						DefaultMutableTreeNode arrays = new DefaultMutableTreeNode(a);
 						object.add(arrays);
+						arrayArr.add(a);
 					}
+					objects.add(o);
+					fields.put(o, fieldsArr);
+					array.put(o, arrayArr);
+					string.put(o, stringsArr);
 					root.add(object);	
 				}
+				db = null;
 				tree.validate();
 			}
 		});
@@ -165,9 +191,17 @@ public class SerializationGUI {
 				String res = JOptionPane.showInputDialog(frame, "name", "Name", JOptionPane.INFORMATION_MESSAGE);
 				DefaultMutableTreeNode node = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
 				SerializationObject o = new SerializationObject(res);
-				db.addObject(o);
+				objects.add(o);
+				
+				//Start the fields
+				fields.put(o, new ArrayList<SerializationField>());
+				//Start the arrays
+				array.put(o, new ArrayList<SerializationArray>());
+				//Start the strings
+				string.put(o, new ArrayList<SerializationString>());
+				
 				if(node != null){
-					node.add(new DefaultMutableTreeNode(o));
+					((DefaultTreeModel) tree.getModel()).insertNodeInto(new DefaultMutableTreeNode(o), (MutableTreeNode) tree.getModel().getRoot(), ((DefaultMutableTreeNode) tree.getModel().getRoot()).getChildCount());
 				}else{
 					((DefaultMutableTreeNode)tree.getModel().getRoot()).add(new DefaultMutableTreeNode(o));
 				}
@@ -185,53 +219,44 @@ public class SerializationGUI {
 					return;
 				}
 				DefaultMutableTreeNode selected = (DefaultMutableTreeNode) tree.getSelectionPath().getLastPathComponent();
-				
-				if(!(selected.getUserObject() instanceof SerializationObject)){
+				Object current = selected.getUserObject();
+				if(!(current instanceof SerializationObject)){
 					JOptionPane.showMessageDialog(frame, "No Serialization Object has been selected!");
 					return;
 				}
 				
+				SerializationObject currentObject = (SerializationObject) current;
 				String r = (String) JOptionPane.showInputDialog(frame, "What kind of field?", "Confirmation", JOptionPane.QUESTION_MESSAGE, null, new Object[]{"byte", "short", "char", "int", "long", "double", "float", "boolean"}, "byte");
 				String name = JOptionPane.showInputDialog(frame, "Name: ", "Field Name", JOptionPane.QUESTION_MESSAGE);
 				String value = JOptionPane.showInputDialog(frame, "Value:", "Value", JOptionPane.QUESTION_MESSAGE);
 				
 				if(r == null){
-					System.out.println("no file selected!");
+					System.out.println("no field selected!");
 					return;
 				}
-				
+				SerializationField c = null;
 				if(r.equalsIgnoreCase("byte")){
-					SerializationField c = SerializationField.createByteField(name, Byte.parseByte(value));
-					((SerializationObject) selected.getUserObject()).addField(c);
-					selected.add(new DefaultMutableTreeNode(c));
+					c = SerializationField.createByteField(name, Byte.parseByte(value));
 				}else if(r.equalsIgnoreCase("short")){
-					SerializationField c = SerializationField.createShortField(name, Short.parseShort(value));
-					((SerializationObject) selected.getUserObject()).addField(c);
-					selected.add(new DefaultMutableTreeNode(c));
+					c = SerializationField.createShortField(name, Short.parseShort(value));
 				}else if(r.equalsIgnoreCase("char")){
-					SerializationField c = SerializationField.createCharField(name, value.charAt(0));
-					((SerializationObject) selected.getUserObject()).addField(c);
-					selected.add(new DefaultMutableTreeNode(c));
+					c = SerializationField.createCharField(name, value.charAt(0));
 				}else if(r.equalsIgnoreCase("int")){
-					SerializationField c = SerializationField.createIntegerField(name, Integer.parseInt(value));
-					((SerializationObject) selected.getUserObject()).addField(c);
-					selected.add(new DefaultMutableTreeNode(c));
+					c = SerializationField.createIntegerField(name, Integer.parseInt(value));
 				}else if(r.equalsIgnoreCase("long")){
-					SerializationField c = SerializationField.createLongField(name, new Long(value));
-					((SerializationObject) selected.getUserObject()).addField(c);
-					selected.add(new DefaultMutableTreeNode(c));
+					c = SerializationField.createLongField(name, new Long(value));
 				}else if(r.equalsIgnoreCase("double")){
-					SerializationField c = SerializationField.createDoubleField(name, Double.parseDouble(value));
-					((SerializationObject) selected.getUserObject()).addField(c);
-					selected.add(new DefaultMutableTreeNode(c));
+					c = SerializationField.createDoubleField(name, Double.parseDouble(value));
 				}else if(r.equalsIgnoreCase("float")){
-					SerializationField c = SerializationField.createFloatField(name, Float.parseFloat(value));
-					((SerializationObject) selected.getUserObject()).addField(c);
-					selected.add(new DefaultMutableTreeNode(c));
+					c = SerializationField.createFloatField(name, Float.parseFloat(value));
 				}else if(r.equalsIgnoreCase("boolean")){
-					SerializationField c = SerializationField.createBooleanField(name, Boolean.parseBoolean(value));
-					((SerializationObject) selected.getUserObject()).addField(c);
-					selected.add(new DefaultMutableTreeNode(c));
+					c = SerializationField.createBooleanField(name, Boolean.parseBoolean(value));
+				}
+				if(c != null){
+					if(fields.containsKey(currentObject)){
+						fields.get(currentObject).add(c);
+					}
+					((DefaultTreeModel) tree.getModel()).insertNodeInto(new DefaultMutableTreeNode(c), selected, selected.getChildCount());
 				}
 			}
 		});
@@ -282,7 +307,12 @@ public class SerializationGUI {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				frame.repaint();
+				for(SerializationObject o : objects){
+					System.out.println(o);
+					for(SerializationField f: fields.get(o)){
+						System.out.println(f);
+					}
+				}
 			}
 		});
 		
@@ -540,7 +570,6 @@ public class SerializationGUI {
 			JFileChooser chooser = new JFileChooser();
 			chooser.showSaveDialog(frame);
 			file = chooser.getSelectedFile();
-			//System.out.println(file.getName().substring(0, file.getName().indexOf(".")));
 			if(file.getPath().indexOf(".") == -1){
 				if(JOptionPane.showConfirmDialog(frame, "Do you want to save with out an extension?") == 1){
 					chooser.showSaveDialog(frame);
@@ -559,11 +588,29 @@ public class SerializationGUI {
 			currentFile = file;
 		}
 		if(file != null){
-			if(db == null){
-				db = new SerializationDatabase(file.getName().substring(0, file.getName().indexOf(".")));
-			}else{
-				db.setName(file.getName().substring(0, file.getName().indexOf(".")));
+			file.delete();
+			try {
+				file.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
+			db = new SerializationDatabase(file.getName().substring(0, file.getName().indexOf(".")));
+			List<SerializationObject> tempObject = new ArrayList<>();
+			tempObject.addAll(objects);
+			for(SerializationObject o : tempObject){
+				for(SerializationField f : fields.get(o)){
+					o.addField(f);
+				}
+				for(SerializationArray a : array.get(o)){
+					o.addArray(a);
+				}
+				for(SerializationString s : string.get(o)){
+					o.addString(s);
+				}
+				db.addObject(o);
+			}
+			tempObject.clear();
 			db.serializeFile(file.getAbsolutePath());
 		}
 	}
