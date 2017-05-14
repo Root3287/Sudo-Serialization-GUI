@@ -127,27 +127,21 @@ public class SerializationGUI {
 				
 				for(SerializationObject o : p.database.objects){
 					DefaultMutableTreeNode object = new DefaultMutableTreeNode(o);
-					List<SerializationField> fieldsArr = new ArrayList<>();
-					List<SerializationArray> arrayArr = new ArrayList<>();
-					List<SerializationString> stringsArr = new ArrayList<>();
 					
 					for(SerializationString s : o.strings){
 						object.add(new DefaultMutableTreeNode(s));
-						stringsArr.add(s);
 					}
 					for(SerializationField f : o.fields){
 						object.add(new DefaultMutableTreeNode(f));
-						fieldsArr.add(f);
 					}
 					for(SerializationArray a : o.arrays){
 						DefaultMutableTreeNode arrays = new DefaultMutableTreeNode(a);
 						object.add(arrays);
-						arrayArr.add(a);
 					}
 					objects.add(o);
-					fields.put(o, fieldsArr);
-					array.put(o, arrayArr);
-					string.put(o, stringsArr);
+					fields.put(o, new ArrayList<SerializationField>());
+					array.put(o, new ArrayList<SerializationArray>());
+					string.put(o, new ArrayList<SerializationString>());
 					root.add(object);	
 				}
 				db = null;
@@ -595,23 +589,16 @@ public class SerializationGUI {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			db = new SerializationDatabase(file.getName().substring(0, file.getName().indexOf(".")));
-			List<SerializationObject> tempObject = new ArrayList<>();
-			tempObject.addAll(objects);
-			for(SerializationObject o : tempObject){
-				for(SerializationField f : fields.get(o)){
+			SerializationDatabase tempDB = new SerializationDatabase(file.getName().substring(0, file.getName().indexOf('.')));
+			List<SerializationObject> tempObj = new ArrayList<>(objects);
+			for(SerializationObject o : tempObj){
+				for(SerializationField f:fields.get(o)){
 					o.addField(f);
 				}
-				for(SerializationArray a : array.get(o)){
-					o.addArray(a);
-				}
-				for(SerializationString s : string.get(o)){
-					o.addString(s);
-				}
-				db.addObject(o);
+				tempDB.addObject(o);
 			}
-			tempObject.clear();
-			db.serializeFile(file.getAbsolutePath());
+			tempObj.clear();
+			tempDB.serializeFile(file.getAbsolutePath());
 		}
 	}
 }
