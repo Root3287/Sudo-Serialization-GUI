@@ -1,8 +1,11 @@
 package site.root3287.serializationgui;
+
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -52,6 +55,8 @@ public class SerializationGUI {
 	private JTabbedPane varibleTabbedPane;
 	private JTree arrayValueTree;
 	private File currentFile = null;
+	private boolean preventClose = false;
+	private boolean recentlySaved = true;
 	
 	private List<SerializationObject> objects = new ArrayList<>();
 	private HashMap<SerializationObject, List<SerializationField>> fields = new HashMap<>();
@@ -90,6 +95,24 @@ public class SerializationGUI {
 		frame = new JFrame();
 		frame.setBounds(100, 100, 900, 900/16*9);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		
+		frame.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent e) {
+				if(preventClose && !recentlySaved){
+					int i = JOptionPane.showConfirmDialog(frame,
+	                        "Do you want to save changes to the serialized file?", "Save Changes",
+	                        JOptionPane.YES_NO_OPTION);
+	                if (i == JOptionPane.NO_OPTION) {
+	                    System.exit(0);
+	                }else if(i == JOptionPane.YES_OPTION){
+	                	saveToFile(null, false);
+	                }
+				}else{
+					System.exit(0);
+				}
+			}
+		});
 		
 		JMenuBar menuBar = new JMenuBar();
 		frame.setJMenuBar(menuBar);
@@ -207,7 +230,8 @@ public class SerializationGUI {
 				db = null;
 				tree.validate();
 				
-				displaySerializationTemp();
+				preventClose = true;
+				frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 			}
 		});
 		
@@ -232,6 +256,10 @@ public class SerializationGUI {
 				}
 				db = new SerializationDatabase("null");
 				tree.setRootVisible(true);
+				
+				preventClose = true;
+				recentlySaved = false;
+				frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 			}
 		});
 		mnNew.add(mntmSerializationFile);
@@ -261,6 +289,8 @@ public class SerializationGUI {
 				}else{
 					((DefaultMutableTreeNode)tree.getModel().getRoot()).add(new DefaultMutableTreeNode(o));
 				}
+				
+				recentlySaved = false;
 			}
 		});
 		mnSerializationItems.add(addObject);
@@ -324,6 +354,7 @@ public class SerializationGUI {
 					}
 					((DefaultTreeModel) tree.getModel()).insertNodeInto(new DefaultMutableTreeNode(c), selected, selected.getChildCount());
 				}
+				recentlySaved = false;
 			}
 		});
 		mnSerializationItems.add(mntmAddField);
@@ -340,7 +371,6 @@ public class SerializationGUI {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				
 				saveToFile(currentFile, true);
 			}
 		});
@@ -610,6 +640,10 @@ public class SerializationGUI {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				if(txtOldvalue.getText().equalsIgnoreCase(txtNewvalue.getText())){ // We did nothing but pressed enter...
+					return;
+				}
+				
 				if(((DefaultMutableTreeNode) tree.getSelectionPath().getLastPathComponent()) == null){
 					return;
 				}
@@ -620,10 +654,36 @@ public class SerializationGUI {
 				}
 				if(current.getUserObject() instanceof SerializationField){
 					SerializationField f = (SerializationField) current.getUserObject();
+					
+					int index = 0;
+					for(int i = 0; i < objects.size(); i++){
+						DefaultMutableTreeNode parent = (DefaultMutableTreeNode) current.getParent();
+						if(parent.getUserObject() instanceof SerializationObject){
+							if(objects.get(i).getName().equalsIgnoreCase(((SerializationObject)parent.getUserObject()).getName())){
+								index = i;
+								break;
+							}
+						}
+					}
+					
+					int fIndex = 0;
+					for(int i = 0; i < fields.get(objects.get(index)).size(); i++){
+						if(current.getUserObject() instanceof SerializationField){
+							if(fields.get(objects.get(index)).get(i).getName().equalsIgnoreCase((((SerializationField) current.getUserObject()).getName()))){
+								fIndex = i;
+								break;
+							}
+						}
+					}
+					
 					switch (f.type) {
 					case SerializationFieldType.BYTE:
 						try{
 							byte b = Byte.parseByte(txtNewvalue.getText());
+							SerializationField newField = SerializationField.createByteField(f.getName(), b);
+							current.setUserObject(newField);
+							
+							fields.get(objects.get(index)).set(fIndex, newField);
 						}catch (Exception error) {
 							JOptionPane.showMessageDialog(frame, "The input value is invalid due to mismatched value type. This value require you to have a byte.");
 						}
@@ -634,6 +694,11 @@ public class SerializationGUI {
 								JOptionPane.showMessageDialog(frame, "The input you have made is a string! This field is for a character. Taking the first character.");
 							}
 							char c = txtNewvalue.getText().charAt(0);
+							
+							SerializationField newField = SerializationField.createCharField(f.getName(), c);
+							current.setUserObject(newField);
+							
+							fields.get(objects.get(index)).set(fIndex, newField);
 						}catch(Exception error){
 							
 						}
@@ -641,6 +706,11 @@ public class SerializationGUI {
 					case SerializationFieldType.SHORT:
 						try{
 							short s = Short.parseShort(txtNewvalue.getText());
+							
+							SerializationField newField = SerializationField.createShortField(f.getName(), s);
+							current.setUserObject(newField);
+							
+							fields.get(objects.get(index)).set(fIndex, newField);
 						}catch (Exception e2) {
 							JOptionPane.showMessageDialog(frame, "The input value is invalid due to mismatched value type. This value require you to have a short.");
 						}
@@ -648,6 +718,11 @@ public class SerializationGUI {
 					case SerializationFieldType.INTEGER:
 						try{
 							int i = Integer.parseInt(txtNewvalue.getText());
+							
+							SerializationField newField = SerializationField.createIntegerField(f.getName(), i);
+							current.setUserObject(newField);
+							
+							fields.get(objects.get(index)).set(fIndex, newField);
 						}catch (Exception e2) {
 							JOptionPane.showMessageDialog(frame, "The input value is invalid due to mismatched value type. This value require you to have a integer.");
 						}
@@ -655,6 +730,10 @@ public class SerializationGUI {
 					case SerializationFieldType.FLOAT:
 						try{
 							float inputf = Float.parseFloat(txtNewvalue.getText());
+							SerializationField newField = SerializationField.createFloatField(f.getName(), inputf);
+							current.setUserObject(newField);
+							
+							fields.get(objects.get(index)).set(fIndex, newField);
 						}catch (Exception e2) {
 							JOptionPane.showMessageDialog(frame, "The input value is invalid due to mismatched value type. This value require you to have a float.");
 						}
@@ -662,19 +741,24 @@ public class SerializationGUI {
 					case SerializationFieldType.DOUBLE:
 						try {
 							double d = Double.parseDouble(txtNewvalue.getText());
+							
+							SerializationField newField = SerializationField.createDoubleField(f.getName(), d);
+							current.setUserObject(newField);
+							
+							fields.get(objects.get(index)).set(fIndex, newField);
 						} catch (Exception e2) {
 							// TODO: handle exception
 						}
 						break;
 					case SerializationFieldType.BOOLEAN:
-						try {
-							boolean b = Boolean.parseBoolean(txtNewvalue.getText());
-						} catch (Exception e2) {
-							JOptionPane.showMessageDialog(frame, "The input value is invalid due to mismatched value type. This value require you to have a boolean. (Ex: true or false");
-						}
+						boolean b = Boolean.parseBoolean(txtNewvalue.getText());
+						SerializationField newField = SerializationField.createBooleanField(f.getName(), b);
+						current.setUserObject(newField);
+						fields.get(objects.get(index)).set(fIndex, newField);
 					default:
 						break;
 					}
+					oldValue.setText(txtNewvalue.getText().trim());
 				}
 			}
 		});
@@ -709,7 +793,9 @@ public class SerializationGUI {
 			JFileChooser chooser = new JFileChooser();
 			chooser.showSaveDialog(frame);
 			file = chooser.getSelectedFile();
-			if(file.getPath().indexOf(".") == -1){
+			if(file == null){
+				return;
+			}else if(file.getPath().indexOf(".") == -1){
 				if(JOptionPane.showConfirmDialog(frame, "Do you want to save with out an extension?") == 1){
 					chooser.showSaveDialog(frame);
 					file = chooser.getSelectedFile();
@@ -745,6 +831,7 @@ public class SerializationGUI {
 			tempObj.clear();
 			tempDB.serializeFile(file.getAbsolutePath());
 		}
+		recentlySaved = true;
 	}
 	
 	public void displaySerializationTemp(){
@@ -756,6 +843,32 @@ public class SerializationGUI {
 			}
 			for(SerializationField field : fields.get(o)){
 				System.out.println("\t"+field);
+				switch (field.type){
+				case SerializationFieldType.BYTE:
+					System.out.println("\t\t"+field.getByte());
+					break;
+				case SerializationFieldType.SHORT:
+					System.out.println("\t\t"+field.getShort());
+					break;
+				case SerializationFieldType.CHAR:
+					System.out.println("\t\t"+field.getChar());
+					break;
+				case SerializationFieldType.INTEGER:
+					System.out.println("\t\t"+field.getInt());
+					break;
+				case SerializationFieldType.LONG:
+					System.out.println("\t\t"+field.getLong());
+					break;
+				case SerializationFieldType.DOUBLE:
+					System.out.println("\t\t"+field.getDouble());
+					break;
+				case SerializationFieldType.FLOAT:
+					System.out.println("\t\t"+field.getFloat());
+					break;
+				case SerializationFieldType.BOOLEAN:
+					System.out.println("\t\t"+field.getBoolean());
+					break;
+				}
 			}
 			for(SerializationArray a : array.get(o)){
 				System.out.println("\t"+a);
