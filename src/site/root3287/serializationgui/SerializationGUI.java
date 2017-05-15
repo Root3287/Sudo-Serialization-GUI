@@ -127,25 +127,87 @@ public class SerializationGUI {
 				
 				for(SerializationObject o : p.database.objects){
 					DefaultMutableTreeNode object = new DefaultMutableTreeNode(o);
+					objects.add(new SerializationObject(o.getName()));
+					root.add(object);
+				}
+				
+				int i =0;
+				for(SerializationObject co : objects){
+					fields.put(objects.get(i), new ArrayList<SerializationField>());
+					array.put(objects.get(i), new ArrayList<SerializationArray>());
+					string.put(objects.get(i), new ArrayList<SerializationString>());
 					
-					for(SerializationString s : o.strings){
+					DefaultMutableTreeNode object = (DefaultMutableTreeNode) root.getChildAt(i);
+					for(SerializationString s : ((SerializationObject)(object.getUserObject())).strings){
 						object.add(new DefaultMutableTreeNode(s));
+						string.get(co).add(SerializationString.create(s.getName(), s.getString()));
 					}
-					for(SerializationField f : o.fields){
+					for(SerializationField f : ((SerializationObject)(object.getUserObject())).fields){
 						object.add(new DefaultMutableTreeNode(f));
+						switch(f.type){
+						case SerializationFieldType.BYTE:
+							fields.get(co).add(SerializationField.createByteField(f.getName(), f.getByte()));
+							break;
+						case SerializationFieldType.SHORT:
+							fields.get(co).add(SerializationField.createShortField(f.getName(), f.getShort()));
+							break;
+						case SerializationFieldType.CHAR:
+							fields.get(co).add(SerializationField.createCharField(f.getName(), f.getChar()));
+							break;
+						case SerializationFieldType.INTEGER:
+							fields.get(co).add(SerializationField.createIntegerField(f.getName(), f.getInt()));
+							break;
+						case SerializationFieldType.LONG:
+							fields.get(co).add(SerializationField.createLongField(f.getName(), f.getLong()));
+							break;
+						case SerializationFieldType.DOUBLE:
+							fields.get(co).add(SerializationField.createDoubleField(f.getName(), f.getDouble()));
+							break;
+						case SerializationFieldType.FLOAT:
+							fields.get(co).add(SerializationField.createFloatField(f.getName(), f.getFloat()));
+							break;
+						case SerializationFieldType.BOOLEAN:
+							fields.get(co).add(SerializationField.createBooleanField(f.getName(), f.getBoolean()));
+							break;
+						}
 					}
-					for(SerializationArray a : o.arrays){
+					for(SerializationArray a : ((SerializationObject)(object.getUserObject())).arrays){
 						DefaultMutableTreeNode arrays = new DefaultMutableTreeNode(a);
 						object.add(arrays);
+						switch(a.type){
+						case SerializationFieldType.BYTE:
+							array.get(co).add(SerializationArray.createByteArray(a.getName(), a.getData()));
+							break;
+						case SerializationFieldType.SHORT:
+							array.get(co).add(SerializationArray.createShortArray(a.getName(), a.getShortData()));
+							break;
+						case SerializationFieldType.CHAR:
+							array.get(co).add(SerializationArray.createCharArray(a.getName(), a.getCharData()));
+							break;
+						case SerializationFieldType.INTEGER:
+							array.get(co).add(SerializationArray.createIntegerArray(a.getName(), a.getIntData()));
+							break;
+						case SerializationFieldType.LONG:
+							array.get(co).add(SerializationArray.createLongArray(a.getName(), a.getLongData()));
+							break;
+						case SerializationFieldType.DOUBLE:
+							array.get(co).add(SerializationArray.createDoubleArray(a.getName(), a.getDoubleData()));
+							break;
+						case SerializationFieldType.FLOAT:
+							array.get(co).add(SerializationArray.createFloatArray(a.getName(), a.getFloatData()));
+							break;
+						case SerializationFieldType.BOOLEAN:
+							array.get(co).add(SerializationArray.createBooleanArray(a.getName(), a.getBooleanData()));
+							break;
+						}
 					}
-					objects.add(o);
-					fields.put(o, new ArrayList<SerializationField>());
-					array.put(o, new ArrayList<SerializationArray>());
-					string.put(o, new ArrayList<SerializationString>());
-					root.add(object);	
+					i++;
 				}
+				
 				db = null;
 				tree.validate();
+				
+				displaySerializationTemp();
 			}
 		});
 		
@@ -219,7 +281,15 @@ public class SerializationGUI {
 					return;
 				}
 				
-				SerializationObject currentObject = (SerializationObject) current;
+				int index = 0;
+				for(int i = 0; i < objects.size(); i++){
+					if(objects.get(i).getName().equals( ((SerializationObject) current).getName())){
+						index = i;
+					}
+				}
+				
+				SerializationObject currentObject = objects.get(index);
+				
 				String r = (String) JOptionPane.showInputDialog(frame, "What kind of field?", "Confirmation", JOptionPane.QUESTION_MESSAGE, null, new Object[]{"byte", "short", "char", "int", "long", "double", "float", "boolean"}, "byte");
 				String name = JOptionPane.showInputDialog(frame, "Name: ", "Field Name", JOptionPane.QUESTION_MESSAGE);
 				String value = JOptionPane.showInputDialog(frame, "Value:", "Value", JOptionPane.QUESTION_MESSAGE);
@@ -249,6 +319,8 @@ public class SerializationGUI {
 				if(c != null){
 					if(fields.containsKey(currentObject)){
 						fields.get(currentObject).add(c);
+					}else{
+						System.out.println("No key found!");
 					}
 					((DefaultTreeModel) tree.getModel()).insertNodeInto(new DefaultMutableTreeNode(c), selected, selected.getChildCount());
 				}
@@ -534,6 +606,78 @@ public class SerializationGUI {
 		
 		txtNewvalue = new JTextField();
 		txtNewvalue.setText("Value");
+		txtNewvalue.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if(((DefaultMutableTreeNode) tree.getSelectionPath().getLastPathComponent()) == null){
+					return;
+				}
+				
+				DefaultMutableTreeNode current = (DefaultMutableTreeNode) tree.getSelectionPath().getLastPathComponent();
+				if(!(current.getUserObject() instanceof SerializationField) && !(current.getUserObject() instanceof SerializationString)){
+					return;
+				}
+				if(current.getUserObject() instanceof SerializationField){
+					SerializationField f = (SerializationField) current.getUserObject();
+					switch (f.type) {
+					case SerializationFieldType.BYTE:
+						try{
+							byte b = Byte.parseByte(txtNewvalue.getText());
+						}catch (Exception error) {
+							JOptionPane.showMessageDialog(frame, "The input value is invalid due to mismatched value type. This value require you to have a byte.");
+						}
+						break;
+					case SerializationFieldType.CHAR:
+						try{
+							if(txtNewvalue.getText().length() > 1){
+								JOptionPane.showMessageDialog(frame, "The input you have made is a string! This field is for a character. Taking the first character.");
+							}
+							char c = txtNewvalue.getText().charAt(0);
+						}catch(Exception error){
+							
+						}
+						break;
+					case SerializationFieldType.SHORT:
+						try{
+							short s = Short.parseShort(txtNewvalue.getText());
+						}catch (Exception e2) {
+							JOptionPane.showMessageDialog(frame, "The input value is invalid due to mismatched value type. This value require you to have a short.");
+						}
+						break;
+					case SerializationFieldType.INTEGER:
+						try{
+							int i = Integer.parseInt(txtNewvalue.getText());
+						}catch (Exception e2) {
+							JOptionPane.showMessageDialog(frame, "The input value is invalid due to mismatched value type. This value require you to have a integer.");
+						}
+						break;
+					case SerializationFieldType.FLOAT:
+						try{
+							float inputf = Float.parseFloat(txtNewvalue.getText());
+						}catch (Exception e2) {
+							JOptionPane.showMessageDialog(frame, "The input value is invalid due to mismatched value type. This value require you to have a float.");
+						}
+						break;
+					case SerializationFieldType.DOUBLE:
+						try {
+							double d = Double.parseDouble(txtNewvalue.getText());
+						} catch (Exception e2) {
+							// TODO: handle exception
+						}
+						break;
+					case SerializationFieldType.BOOLEAN:
+						try {
+							boolean b = Boolean.parseBoolean(txtNewvalue.getText());
+						} catch (Exception e2) {
+							JOptionPane.showMessageDialog(frame, "The input value is invalid due to mismatched value type. This value require you to have a boolean. (Ex: true or false");
+						}
+					default:
+						break;
+					}
+				}
+			}
+		});
 		scrollPane_2.setViewportView(txtNewvalue);
 		txtNewvalue.setColumns(10);
 		
@@ -560,6 +704,7 @@ public class SerializationGUI {
 	}
 	
 	public void saveToFile(File file, boolean toCurrentFile){
+		displaySerializationTemp();
 		if(file == null){
 			JFileChooser chooser = new JFileChooser();
 			chooser.showSaveDialog(frame);
@@ -599,6 +744,25 @@ public class SerializationGUI {
 			}
 			tempObj.clear();
 			tempDB.serializeFile(file.getAbsolutePath());
+		}
+	}
+	
+	public void displaySerializationTemp(){
+		for(SerializationObject o : objects){
+			System.out.println(o);
+			if(!fields.containsKey(o) || !array.containsKey(o) || !string.containsKey(o)){
+				System.out.println("something does not contains this obj");
+				return;
+			}
+			for(SerializationField field : fields.get(o)){
+				System.out.println("\t"+field);
+			}
+			for(SerializationArray a : array.get(o)){
+				System.out.println("\t"+a);
+			}
+			for(SerializationString s : string.get(o)){
+				System.out.println("\t"+s);
+			}
 		}
 	}
 }
