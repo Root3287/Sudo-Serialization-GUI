@@ -106,7 +106,8 @@ public class SerializationGUI {
 	                if (i == JOptionPane.NO_OPTION) {
 	                    System.exit(0);
 	                }else if(i == JOptionPane.YES_OPTION){
-	                	saveToFile(null, false);
+	                	saveToFile(currentFile, false);
+	                	System.exit(0);
 	                }
 				}else{
 					System.exit(0);
@@ -391,7 +392,19 @@ public class SerializationGUI {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				frame.dispose();
+				if(preventClose && !recentlySaved){
+					int i = JOptionPane.showConfirmDialog(frame,
+	                        "Do you want to save changes to the serialized file?", "Save Changes",
+	                        JOptionPane.YES_NO_OPTION);
+	                if (i == JOptionPane.NO_OPTION) {
+	                    System.exit(0);
+	                }else if(i == JOptionPane.YES_OPTION){
+	                	saveToFile(currentFile, false);
+	                	System.exit(0);
+	                }
+				}else{
+					System.exit(0);
+				}
 			}
 		});
 		
@@ -758,6 +771,7 @@ public class SerializationGUI {
 					default:
 						break;
 					}
+					recentlySaved = false;
 					oldValue.setText(txtNewvalue.getText().trim());
 				}
 			}
