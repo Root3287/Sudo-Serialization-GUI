@@ -274,6 +274,12 @@ public class SerializationGUI {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				String res = JOptionPane.showInputDialog(frame, "name", "Name", JOptionPane.INFORMATION_MESSAGE);
+				for(SerializationObject o : objects){
+					if(res.equalsIgnoreCase(o.getName())){
+						res = res+"-";
+					}
+				}
+				
 				DefaultMutableTreeNode node = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
 				SerializationObject o = new SerializationObject(res);
 				objects.add(o);
@@ -323,6 +329,31 @@ public class SerializationGUI {
 				
 				String r = (String) JOptionPane.showInputDialog(frame, "What kind of field?", "Confirmation", JOptionPane.QUESTION_MESSAGE, null, new Object[]{"byte", "short", "char", "int", "long", "double", "float", "boolean"}, "byte");
 				String name = JOptionPane.showInputDialog(frame, "Name: ", "Field Name", JOptionPane.QUESTION_MESSAGE);
+				
+				for(SerializationObject o : fields.keySet()){
+					for(SerializationField f : fields.get(o)){
+						if(name.equalsIgnoreCase(f.getName())){
+							if(r.equalsIgnoreCase("byte") && f.type == SerializationFieldType.BYTE){
+								name = name +"-";
+							}else if(r.equalsIgnoreCase("short")&& f.type == SerializationFieldType.SHORT){
+								name = name +"-";
+							}else if(r.equalsIgnoreCase("char")&& f.type == SerializationFieldType.CHAR){
+								name = name +"-";
+							}else if(r.equalsIgnoreCase("int")&& f.type == SerializationFieldType.INTEGER){
+								name = name +"-";
+							}else if(r.equalsIgnoreCase("long")&& f.type == SerializationFieldType.LONG){
+								name = name +"-";
+							}else if(r.equalsIgnoreCase("double") && f.type == SerializationFieldType.DOUBLE){
+								name = name +"-";
+							}else if(r.equalsIgnoreCase("float") && f.type == SerializationFieldType.FLOAT){
+								name = name +"-";
+							}else if(r.equalsIgnoreCase("boolean") && f.type == SerializationFieldType.BOOLEAN){
+								name = name +"-";
+							}
+						}
+					}
+				}
+				
 				String value = JOptionPane.showInputDialog(frame, "Value:", "Value", JOptionPane.QUESTION_MESSAGE);
 				
 				if(r == null){
@@ -358,6 +389,49 @@ public class SerializationGUI {
 				recentlySaved = false;
 			}
 		});
+		
+		JMenuItem mntmAddString = new JMenuItem("Add String");
+		mntmAddString.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if(tree.getSelectionPath() == null){
+					JOptionPane.showMessageDialog(frame, "No object was selected!", "No object!", JOptionPane.WARNING_MESSAGE);
+					return;
+				}
+				DefaultMutableTreeNode selected = (DefaultMutableTreeNode) tree.getSelectionPath().getLastPathComponent();
+				Object current = selected.getUserObject();
+				if(!(current instanceof SerializationObject)){
+					JOptionPane.showMessageDialog(frame, "No Serialization Object has been selected!");
+					return;
+				}
+				
+				int index = 0;
+				for(int i = 0; i < objects.size(); i++){
+					if(objects.get(i).getName().equals( ((SerializationObject) current).getName())){
+						index = i;
+					}
+				}
+				
+				SerializationObject currentObject = objects.get(index);
+				
+				String name = JOptionPane.showInputDialog(frame, "Name:");
+				for(SerializationObject o : string.keySet()){
+					for(SerializationString s : string.get(o)){
+						if(s.getName().equalsIgnoreCase(name)){
+							name = name+"-";
+						}
+					}
+				}
+				String data = JOptionPane.showInputDialog(frame, "Data:");
+				SerializationString c = SerializationString.create(name,data);
+				if(string.containsKey(currentObject)){
+					string.get(currentObject).add(c);
+				}else{
+					System.out.println("No key found!");
+				}
+				((DefaultTreeModel) tree.getModel()).insertNodeInto(new DefaultMutableTreeNode(c), selected, selected.getChildCount());
+			}
+		});
+		mnSerializationItems.add(mntmAddString);
 		mnSerializationItems.add(mntmAddField);
 		
 		JMenuItem mntmAddArray = new JMenuItem("Add Array");
@@ -408,9 +482,6 @@ public class SerializationGUI {
 			}
 		});
 		
-		JMenuItem mntmSaveKey = new JMenuItem("Save Key");
-		mnFile.add(mntmSaveKey);
-		
 		JMenuItem mntmRefresh = new JMenuItem("Refresh");
 		mntmRefresh.addActionListener(new ActionListener() {
 			
@@ -449,9 +520,35 @@ public class SerializationGUI {
 				String newName = JOptionPane.showInputDialog(frame, "New Name", "Rename", JOptionPane.QUESTION_MESSAGE);
 				if(current.getUserObject() instanceof SerializationObject){
 					SerializationObject obj = (SerializationObject) current.getUserObject();
+					int index = 0;
+					for(int i=0; i <objects.size(); i++){
+						if(objects.get(i).getName().equalsIgnoreCase( ((SerializationObject)current.getUserObject()).getName())){
+							index = i;
+							break;
+						}
+					}
+					objects.get(index).setName(newName);
 					obj.setName(newName);
 				}else if(current.getUserObject() instanceof SerializationField){
 					SerializationField f = (SerializationField) current.getUserObject();
+					
+					int objectIndex = 0;
+					for(int i=0; i <objects.size(); i++){
+						if(objects.get(i).getName().equalsIgnoreCase( ((SerializationObject)((DefaultMutableTreeNode) current.getParent()).getUserObject()).getName())){
+							objectIndex = i;
+							break;
+						}
+					}
+					
+					int index = 0;
+					for(int i=0; i <fields.get(objects.get(objectIndex)).size(); i++){
+						if(fields.get(objects.get(objectIndex)).get(i).getName().equalsIgnoreCase(((SerializationField)current.getUserObject()).getName()) && ((SerializationField)current.getUserObject()).type == fields.get(objects.get(objectIndex)).get(i).type){
+							objectIndex = i;
+							break;
+						}
+					}
+					
+					fields.get(objectIndex).get(index).setName(newName);
 					f.setName(newName);
 				}else if(current.getUserObject() instanceof SerializationArray){
 					SerializationArray a = (SerializationArray) current.getUserObject();
@@ -461,22 +558,80 @@ public class SerializationGUI {
 		});
 		mnEdit.add(mntmRename);
 		
+		JSeparator separator_3 = new JSeparator();
+		mnEdit.add(separator_3);
+		
 		JMenuItem mntmCut = new JMenuItem("Cut");
+		mntmCut.setEnabled(false);
 		mnEdit.add(mntmCut);
 		
 		JMenuItem mntmCopy = new JMenuItem("Copy");
+		mntmCopy.setEnabled(false);
 		mnEdit.add(mntmCopy);
 		
 		JMenuItem mntmPaste = new JMenuItem("Paste");
+		mntmPaste.setEnabled(false);
 		mnEdit.add(mntmPaste);
+		
+		JSeparator separator_4 = new JSeparator();
+		mnEdit.add(separator_4);
+		
+		JMenuItem mntmDelete = new JMenuItem("Delete");
+		mntmDelete.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				DefaultMutableTreeNode current = (DefaultMutableTreeNode) tree.getSelectionPath().getLastPathComponent();
+				if(current == null){
+					return;
+				}
+				if(current.getUserObject() instanceof SerializationObject){
+					int index = 0;
+					for(int i=0; i <objects.size(); i++){
+						if(objects.get(i).getName().equalsIgnoreCase( ((SerializationObject)current.getUserObject()).getName())){
+							index = i;
+							break;
+						}
+					}
+					
+					fields.remove(objects.get(index));
+					array.remove(objects.get(index));
+					string.remove(objects.get(index));
+					objects.remove(index);
+					((DefaultTreeModel)tree.getModel()).removeNodeFromParent(current);
+				}else if(current.getUserObject() instanceof SerializationField){
+					int objectIndex = 0;
+					for(int i=0; i <objects.size(); i++){
+						if(objects.get(i).getName().equalsIgnoreCase( ((SerializationObject)((DefaultMutableTreeNode) current.getParent()).getUserObject()).getName())){
+							objectIndex = i;
+							break;
+						}
+					}
+					
+					int index = 0;
+					for(int i=0; i <fields.get(objects.get(objectIndex)).size(); i++){
+						if(fields.get(objects.get(objectIndex)).get(i).getName().equalsIgnoreCase(((SerializationField)current.getUserObject()).getName()) && ((SerializationField)current.getUserObject()).type == fields.get(objects.get(objectIndex)).get(i).type){
+							objectIndex = i;
+							break;
+						}
+					}
+					
+					fields.get(objects.get(objectIndex)).remove(index);
+					((DefaultTreeModel)tree.getModel()).removeNodeFromParent(current);
+				}
+			}
+		});
+		mnEdit.add(mntmDelete);
 		
 		JMenu mnHelp = new JMenu("Help");
 		menuBar.add(mnHelp);
 		
 		JMenuItem mntmHowTo = new JMenuItem("How to");
+		mntmHowTo.setEnabled(false);
 		mnHelp.add(mntmHowTo);
 		
 		JMenuItem mntmAbout = new JMenuItem("About");
+		mntmAbout.setEnabled(false);
 		mntmAbout.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				new AboutGUI();
@@ -682,7 +837,7 @@ public class SerializationGUI {
 					int fIndex = 0;
 					for(int i = 0; i < fields.get(objects.get(index)).size(); i++){
 						if(current.getUserObject() instanceof SerializationField){
-							if(fields.get(objects.get(index)).get(i).getName().equalsIgnoreCase((((SerializationField) current.getUserObject()).getName()))){
+							if(fields.get(objects.get(index)).get(i).getName().equalsIgnoreCase((((SerializationField) current.getUserObject()).getName())) && ((SerializationField) current.getUserObject()).type == fields.get(objects.get(index)).get(i).type){
 								fIndex = i;
 								break;
 							}
@@ -773,6 +928,33 @@ public class SerializationGUI {
 					}
 					recentlySaved = false;
 					oldValue.setText(txtNewvalue.getText().trim());
+				}else if(current.getUserObject() instanceof SerializationString){
+					SerializationString f = (SerializationString) current.getUserObject();
+					
+					int index = 0;
+					for(int i = 0; i < objects.size(); i++){
+						DefaultMutableTreeNode parent = (DefaultMutableTreeNode) current.getParent();
+						if(parent.getUserObject() instanceof SerializationObject){
+							if(objects.get(i).getName().equalsIgnoreCase(((SerializationObject)parent.getUserObject()).getName())){
+								index = i;
+								break;
+							}
+						}
+					}
+					
+					int fIndex = 0;
+					for(int i = 0; i < string.get(objects.get(index)).size(); i++){
+						if(current.getUserObject() instanceof SerializationString){
+							if(string.get(objects.get(index)).get(i).getName().equalsIgnoreCase((((SerializationString) current.getUserObject()).getName()))){
+								fIndex = i;
+								break;
+							}
+						}
+					}
+					SerializationString str = SerializationString.create(f.getName(), txtNewvalue.getText());
+					current.setUserObject(str);
+					string.get(objects.get(index)).set(fIndex, str);
+					oldValue.setText(txtNewvalue.getText().trim());
 				}
 			}
 		});
@@ -839,6 +1021,12 @@ public class SerializationGUI {
 			for(SerializationObject o : tempObj){
 				for(SerializationField f:fields.get(o)){
 					o.addField(f);
+				}
+				for(SerializationString f:string.get(o)){
+					o.addString(f);
+				}
+				for(SerializationArray f:array.get(o)){
+					o.addArray(f);
 				}
 				tempDB.addObject(o);
 			}
