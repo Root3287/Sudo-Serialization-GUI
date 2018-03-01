@@ -13,13 +13,13 @@ public class SerializationFieldType {
 	
 	public static int getSize(byte type) {
 		switch (type) {
-			case BYTE:		return 1;
-			case SHORT:		return 2;
-			case CHAR:		return 2;
-			case INTEGER:	return 4;
-			case LONG:		return 8;
-			case FLOAT:		return 4;
-			case DOUBLE:	return 8;
+			case BYTE:		return Byte.BYTES;
+			case SHORT:		return Short.BYTES;
+			case CHAR:		return Character.BYTES;
+			case INTEGER:	return Integer.BYTES;
+			case LONG:		return Long.BYTES;
+			case FLOAT:		return Float.BYTES;
+			case DOUBLE:	return Double.BYTES;
 			case BOOLEAN:	return 1;
 		}
 		assert(false);

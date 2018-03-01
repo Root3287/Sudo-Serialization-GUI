@@ -416,12 +416,7 @@ public class SerializationGUI {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				for(SerializationObject o : objects){
-					System.out.println(o);
-					for(SerializationField f: fields.get(o)){
-						System.out.println(f);
-					}
-				}
+				displaySerializationTemp();
 			}
 		});
 		
